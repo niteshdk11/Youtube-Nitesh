@@ -1,0 +1,276 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -144
+      ],
+      "id": "32bac6d8-e445-4dd5-84e9-caf30046f256",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "Wpp1BZ6yGWjySadk3",
+          "mode": "id"
+        },
+        "customBody": "{\n    \"deepScrape\": false,\n    \"fetchDocumentDetails\": false,\n    \"limitPerSource\": 10,\n    \"numComments\": 0,\n    \"numLikes\": 0,\n    \"rawData\": false,\n    \"urls\": [   \"https://www.linkedin.com/in/sebastianstilou/\"\n    ]\n}",
+        "timeout": {},
+        "authentication": "apifyOAuth2Api"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -144
+      ],
+      "id": "0afa4c39-b85a-4fd6-ab9c-1080be2805d7",
+      "name": "Run an Actor and get dataset",
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "WKDvwfrKUXjdoGdO",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bb8ce649-fc78-40d1-a6e4-8b5a7a3ab670",
+              "name": "post_content",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "19bf24bd-28c0-43e8-bd13-12ebff2e3747",
+              "name": "timeSincePosted",
+              "value": "={{ $json.timeSincePosted }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -112,
+        -144
+      ],
+      "id": "c7d44a89-85f7-4cba-b711-d78f85c6f27a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $('Run an Actor and get dataset').first().json.activityOfUser;\n\nconst name = `${user.firstName || ''} ${user.lastName || ''}`.trim();\n\nconst posts = $input.all().map(item => ({\n  post_content: item.json.post_content,\n  timeSincePosted: item.json.timeSincePosted\n}));\n\nreturn [\n  {\n    json: {\n      name,\n      posts\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -144
+      ],
+      "id": "974d9803-9c5f-456a-9474-4c376f50899e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following latest LinkedIn posts from a CTO/Founder.\n\n{{ JSON.stringify($json.posts, null, 2) }}\n\nBased only on these posts, create a concise Markdown report covering:\n\n1. Key themes and topics\n2. Problems or challenges they mention\n3. Opportunities where an intern/job seeker could potentially provide value\n4. Relevant technologies, projects, or areas they are interested in\n\nDo not invent or assume anything that is not supported by the posts. Focus on actionable insights that can later be used to create a personalized LinkedIn connection message.",
+        "options": {
+          "systemMessage": "You are a LinkedIn research analyst.\n\nAnalyze the 10 latest posts provided from a CTO/Founder and identify the key themes, problems, challenges, interests, and potential opportunities relevant to an internship or job seeker.\n\nDo not invent or assume problems that are not supported by the posts.\n\nReturn a concise Markdown report with:\n\n## Key Themes\n- Main topics discussed across the posts\n\n## Problems / Challenges\n- Problems or pain points explicitly or strongly indicated\n\n## Potential Opportunities\n- Areas where an intern/job seeker could potentially provide value\n\n## Useful Context\n- Any important project, technology, initiative, or interest mentioned\n\nBase every insight only on the provided posts. Keep the report concise and actionable."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        336,
+        -144
+      ],
+      "id": "034d8128-cc83-4273-81f0-566f4f4c963f",
+      "name": "report agent",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is the analysisi of the posts and the name is {{ $('Code in JavaScript').item.json.name }} , {{ $json.output }}",
+        "options": {
+          "systemMessage": "You are a LinkedIn outreach message writer.\n\nUsing the provided research report and person's name, write a concise, natural, human-readable LinkedIn connection message.\n\nFollow this structure:\n\n1. Personal Opening — Start with the person's first name naturally (e.g., \"Hi John,\") to make the message personal.\n2. Hook — Reference a specific problem, insight, or opportunity from their posts.\n3. Value — Briefly mention your relevant approach, skill, or solution.\n4. Who I am — Introduce yourself in one short sentence.\n5. What I want — Clearly state that you are looking for an internship/job opportunity and would like to connect.\n\nRules:\n- Keep it to 4–7 short lines.\n- Use their first name at the beginning.\n- Be specific to their posts; never use generic compliments.\n- Sound like a real person, not an AI.\n- Keep the tone professional but conversational.\n- Do not exaggerate your skills or claim results you don't have.\n- Do not invent problems or opportunities.\n- Avoid unnecessary greetings, filler, emojis, and buzzwords.\n- Make every sentence useful.\n- Return only the final message, with no explanation or quotation marks."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        -144
+      ],
+      "id": "e3a45878-5f73-4f32-9702-ae7475a9eed6",
+      "name": "messgae-genenration-agent"
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-v3.2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        416,
+        96
+      ],
+      "id": "f42a39b7-3227-4f0b-afe3-a743451da12a",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "P5g2b1lefUkJ5kmV",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = String($json.output || '');\n\nconst message = output\n  .replace(/\\\\n/g, '\\n')\n  .trim();\n\nreturn [\n  {\n    json: {\n      message,\n    \n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -144
+      ],
+      "id": "224575d9-7967-4579-8257-7b9bae928ac0",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5a106b51-1a9d-411c-8bdd-e885b1fa7932",
+              "name": "message ",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1264,
+        -144
+      ],
+      "id": "28dd5543-b902-426a-ade4-d3bd250c882c",
+      "name": "Edit Fields1"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Run an Actor and get dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run an Actor and get dataset": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "report agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "report agent": {
+      "main": [
+        [
+          {
+            "node": "messgae-genenration-agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "messgae-genenration-agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "report agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "messgae-genenration-agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3b407b07bd4a3c8e89c8156c1394269fa0cbce82cd2e4d0f30c9d376f84da6cf"
+  }
+}
